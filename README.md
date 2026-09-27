@@ -3,6 +3,8 @@
 A Game Boy (DMG) homage to the 1984 PC game **Sopwith** by David L. Clark (BMB Compuscience).
 It was written from scratch in C for GBDK-2020. It is not a port of the original source code, and all graphics are new.
 
+![Screenshots](./screenshots.png)
+
 ## What's in it
 
 - A side-scrolling world 1536 px wide, with hills, trees, your airfield on the far left and the enemy airfield on the far right.

@@ -15,6 +15,7 @@ It was written from scratch in C for GBDK-2020. It is not a port of the original
 - A flock of birds that you can hit, or fly into.
 - A HUD with a minimap of the whole world, gauges for fuel and ammo, and counts for bombs, lives and mission.
 - Missions get harder each time: more enemies that are faster and more aggressive. Destroying every target gives a bonus and an extra plane.
+- Enemy fire is tuned to be dodgeable. Enemy bullets travel at half the speed of yours, and on mission 1 an enemy fires at most once every 80 frames (about 1.3 s). You can adjust this with the `ENEMY_FIRE_*` / `ENEMY_BULLET_LIFE` defines at the top of `src/main.c`.
 - Sound: an engine drone whose pitch follows your speed, plus gunfire, the whistle of a falling bomb, explosions and hits.
 
 ## Controls

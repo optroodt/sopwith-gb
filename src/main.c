@@ -33,6 +33,12 @@
 #define BOMBS_MAX    5
 #define START_LIVES  4
 
+/* enemy difficulty */
+#define ENEMY_FIRE_CD      80   /* frames between shots on mission 1 */
+#define ENEMY_FIRE_MIN_CD  38
+#define ENEMY_FIRE_RANGE   90   /* px */
+#define ENEMY_BULLET_LIFE  40   /* slower bullets fly longer */
+
 #define P_GROUND 0
 #define P_FLY    1
 #define P_FALL   2
@@ -736,7 +742,8 @@ static void player_shot(void) {
     }
 }
 
-static uint8_t fire_bullet(obj_t *o, uint8_t n, uint8_t *cnt, int16_t x, int16_t y, uint8_t dir, int8_t vx, int8_t vy) {
+/* slow = enemy bullet: half muzzle speed (2 px/frame) but a longer life */
+static uint8_t fire_bullet(obj_t *o, uint8_t n, uint8_t *cnt, int16_t x, int16_t y, uint8_t dir, int8_t vx, int8_t vy, uint8_t slow) {
     int8_t c = cos64[dir], s = sin64[dir];
     for (; n; n--, o++) {
         if (!o->life) {
@@ -744,9 +751,15 @@ static uint8_t fire_bullet(obj_t *o, uint8_t n, uint8_t *cnt, int16_t x, int16_t
             o->y = y - ((int16_t)s << 1);
             o->xp = o->x >> FIX;
             o->yp = o->y >> FIX;
-            o->vx = vx + c;
-            o->vy = vy - s;
-            o->life = 26;
+            if (slow) {
+                o->vx = vx + (c >> 1);
+                o->vy = vy - (s >> 1);
+                o->life = ENEMY_BULLET_LIFE;
+            } else {
+                o->vx = vx + c;
+                o->vy = vy - s;
+                o->life = 26;
+            }
             o->type = SPR_BULLET;
             (*cnt)++;
             snd_gun();
@@ -892,7 +905,7 @@ static void update_player(void) {
     if (bomb_cd) bomb_cd--;
     if (pstate != P_FLY) return;
     if ((joy & J_A) && !fire_cd && pammo) {
-        if (fire_bullet(pbul, N_PBUL, &n_pbul, px, py, pdir, pvx, pvy)) pammo--;
+        if (fire_bullet(pbul, N_PBUL, &n_pbul, px, py, pdir, pvx, pvy, 0)) pammo--;
         fire_cd = 6;
     }
     if ((joy_new & J_B) && !bomb_cd && pbombs) {
@@ -930,7 +943,7 @@ static void spawn_enemy(void) {
             e->vdir = 0xFF;
             e->spd = 24 + (level << 1);
             if (e->spd > 40) e->spd = 40;
-            e->cd = 60;
+            e->cd = 120;       /* grace period after take-off */
             n_enemy++;
             return;
         }
@@ -977,9 +990,10 @@ static void update_enemies(void) {
         if (e->cd) e->cd--;
         else if (((frame + i) & 3) == 0 && pstate <= P_FLY) {
             int16_t dx = pxp - e->xp, dy = pyp - e->yp;
-            if (NEAR(dx, 100) && NEAR(dy, 64) && dir_diff(e->dir, dir_to(dx, dy)) <= 1) {
-                fire_bullet(ebul, N_EBUL, &n_ebul, e->x, e->y, e->dir, e->vx, e->vy);
-                e->cd = (level > 4) ? 14 : 30 - level * 3;
+            if (NEAR(dx, ENEMY_FIRE_RANGE) && NEAR(dy, 56) && dir_diff(e->dir, dir_to(dx, dy)) <= 1) {
+                fire_bullet(ebul, N_EBUL, &n_ebul, e->x, e->y, e->dir, e->vx, e->vy, 1);
+                /* pause between shots: 80 frames on mission 1, shorter later */
+                e->cd = (level >= 8) ? ENEMY_FIRE_MIN_CD : ENEMY_FIRE_CD - (level - 1) * 6;
             }
         }
         if (e->dir != e->vdir) {
@@ -1071,7 +1085,7 @@ static void update_bullets(void) {
         if (!o->life) continue;
         if (o->yp >= GROUND_MIN_Y && o->yp >= (int16_t)ground_y(o->xp)) { o->life = 0; continue; }
         n++;
-        if (pstate <= P_FLY && NEAR(pxp - o->xp, 5) && NEAR(pyp - o->yp, 4)) {
+        if (pstate <= P_FLY && NEAR(pxp - o->xp, 4) && NEAR(pyp - o->yp, 3)) {
             o->life = 0;
             player_shot();
         }
